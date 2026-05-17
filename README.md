@@ -6,7 +6,7 @@ The AI flow uses Gemini 2.5 Flash's function-calling to convert messages like *"
 
 ## Demo
 
-[YOUR LOOM URL HERE — fill in after recording]
+[Loom walkthrough (4:35)](https://www.loom.com/share/273add04a65d450290f6441430e93659)
 
 ## Stack
 
@@ -167,13 +167,15 @@ All errors return `{ error: { code, message } }` with appropriate HTTP status co
 
 ## How I used Claude Code
 
-> **Replace this section with your own version before submitting.** This is the section the interviewer will probe — it has to be in your voice and accurately reflect what happened. A template to start from:
+I used Claude Code as my primary development driver, anchored by a `CLAUDE.md` context file at the repo root that captured the project's architecture, type contracts, and conventions. The agent read this on every prompt, which kept its output aligned with the structure I wanted instead of generating well-styled but inconsistent code.
 
-I used Claude Code as my primary development driver, with a `CLAUDE.md` file at the repo root providing project context and conventions. The scaffolding (Express server, screen components, Zustand store boilerplate, navigation setup) was almost entirely AI-generated from focused prompts that referenced the contracts in CLAUDE.md. I hand-wrote `chat.ts` and the function-call tool declarations specifically — the LLM-integration code is the highest-leverage 50 lines in the project, and I wanted to be able to defend every design decision.
+The division of labor was deliberate. I delegated scaffolding-heavy work: the Express server skeleton, screen components, the Zustand store boilerplate, navigation setup, and most of the NativeWind styling. I hand-wrote `chat.ts` and the function-call tool declarations myself — that file is the highest-leverage 50 lines in the project and I wanted to be able to defend every decision in it. I also hand-wrote the `synthesizeReply` function that generates fallback confirmation text from the action list when Gemini returns terse output.
 
-Mid-build I caught Claude Code spreading the full `MenuItem` (including its available `modifiers` field) into new `CartItem`s, which made every tap-added item show fake modifier text in the cart; the fix was a one-line destructure. Other interventions: forcing `npx expo install` for version-pinned native modules after Claude Code's `npm install` produced an Expo SDK mismatch warning, and overriding the initial styling pattern to use a named `brand` color in `tailwind.config.js` rather than scattered hex values.
+The most meaningful intervention I made: Claude Code initially built the `addItem` mutator on the Zustand store as `{ ...item, quantity, ...(modifiers ? { modifiers } : {}) }`. That spread copied `MenuItem.modifiers` — the menu's *available* modifier options — into the new `CartItem` as if they were selected. The result was every tap-added item showing modifier text like "extra spicy, no pickles, gluten-free bun" in the cart, even when the user had selected nothing. The fix was a one-line destructure to drop the menu-level modifiers off before building the cart item. This was a "type-equal but semantically different" bug — both fields are `string[] | undefined`, so TypeScript didn't catch it.
 
-The pattern that worked best: prompt for one file or one feature at a time, review the diff, run it, then prompt for the next. Trying to one-shot the whole mobile app at once produces sprawling, harder-to-review output.
+One other intervention worth noting: when Claude Code's `npm install` produced an Expo SDK version-mismatch warning on `babel-preset-expo`, I reinstalled with `npx expo install` and explicit version pins to align with SDK 54. AI tools default to the latest version of a package, which often mismatches the SDK's expected version — `expo install` resolves to the SDK-compatible version instead.
+
+The honest takeaway: Claude Code accelerated the parts of the project where correctness was checkable from the outside (does the screen render? does the test pass?), and I kept manual control over the parts where the cost of being wrong was high — LLM tool schemas, the prompt that constrains the model to real menu items, and the synthesized reply logic.
 
 ## Known limitations and future work
 
